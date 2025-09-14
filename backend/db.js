@@ -1,8 +1,24 @@
 const admin = require('firebase-admin');
-require('dotenv').config();
 
 // Initialize Firebase Admin SDK
 try {
+  // Check if required environment variables are present
+  const requiredEnvVars = [
+    'FIREBASE_PROJECT_ID',
+    'FIREBASE_PRIVATE_KEY_ID', 
+    'FIREBASE_PRIVATE_KEY',
+    'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_CLIENT_ID'
+  ];
+
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    console.error('Missing required environment variables:', missingVars);
+    console.error('Please check your .env file');
+    process.exit(1);
+  }
+
   const serviceAccount = {
     type: "service_account",
     project_id: process.env.FIREBASE_PROJECT_ID,
@@ -26,6 +42,7 @@ try {
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Firebase initialization error:', error.message);
+  console.error('Full error:', error);
   process.exit(1);
 }
 

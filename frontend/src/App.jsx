@@ -4,7 +4,6 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import SystemPrompt from './pages/SystemPrompt';
 import Knowledge from './pages/Knowledge';
-import CallLogs from './pages/CallLogs';
 import API_BASE_URL from './config/api';
 
 function App() {
@@ -94,16 +93,6 @@ function App() {
             element={
               token ? (
                 <Knowledge clinic={clinic} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/" />
-              )
-            }
-          />
-          <Route
-            path="/calls"
-            element={
-              token ? (
-                <CallLogs clinic={clinic} onLogout={handleLogout} />
               ) : (
                 <Navigate to="/" />
               )
