@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 import Modal from '../components/Modal';
+import SetupWizard from '../components/SetupWizard';
 
 const Dashboard = ({ clinic, onLogout }) => {
   const [phoneInfo, setPhoneInfo] = useState(null);
@@ -14,6 +15,8 @@ const Dashboard = ({ clinic, onLogout }) => {
   const [showAreaCodeInput, setShowAreaCodeInput] = useState(false);
   const [areaCode, setAreaCode] = useState('689');
   const [provisioningStatus, setProvisioningStatus] = useState('');
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [deletingPhone, setDeletingPhone] = useState(false);
   
   // Modal states
   const [modal, setModal] = useState({
@@ -32,6 +35,13 @@ const Dashboard = ({ clinic, onLogout }) => {
     const interval = setInterval(fetchCalls, 30000); // Auto-refresh calls every 30 seconds
     return () => clearInterval(interval);
   }, []);
+
+  // Check if setup is needed - only show wizard for completely new users
+  useEffect(() => {
+    if (!loading && !assistantInfo && !phoneInfo) {
+      setShowSetupWizard(true);
+    }
+  }, [loading, assistantInfo, phoneInfo]);
 
   const fetchData = async () => {
     try {
@@ -130,6 +140,11 @@ const Dashboard = ({ clinic, onLogout }) => {
     }
   };
 
+  const handleSetupComplete = () => {
+    setShowSetupWizard(false);
+    fetchData(); // Refresh data to show updated status
+  };
+
   const handleProvisionPhone = async () => {
     try {
       setLoading(true); // Prevent multiple clicks
@@ -195,15 +210,16 @@ const Dashboard = ({ clinic, onLogout }) => {
       type: 'confirm',
       onConfirm: async () => {
         try {
+          setDeletingPhone(true);
           const token = localStorage.getItem('token');
           await axios.delete(`${API_BASE_URL}/api/phone/delete`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          fetchData();
+          await fetchData(); // Wait for data to refresh
           setModal({
             isOpen: true,
             title: 'Success',
-            message: 'Phone number deleted successfully',
+            message: 'Phone number deleted successfully. You can now provision a new number.',
             type: 'success',
             onConfirm: null,
             confirmText: 'OK',
@@ -224,6 +240,8 @@ const Dashboard = ({ clinic, onLogout }) => {
             confirmText: 'OK',
             showCancel: false
           });
+        } finally {
+          setDeletingPhone(false);
         }
       },
       confirmText: 'Delete',
@@ -461,8 +479,24 @@ const Dashboard = ({ clinic, onLogout }) => {
                         <div>
                           <p className="text-sm font-mono text-gray-700 mb-1">{phoneInfo.phone_number}</p>
                           {phoneInfo.area_code && (
-                            <p className="text-xs text-gray-500">Area code: {phoneInfo.area_code}</p>
+                            <p className="text-xs text-gray-500 mb-3">Area code: {phoneInfo.area_code}</p>
                           )}
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => setShowAreaCodeInput(true)}
+                              disabled={loading || deletingPhone}
+                              className="flex-1 bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              New
+                            </button>
+                            <button
+                              onClick={handleDeletePhone}
+                              disabled={deletingPhone}
+                              className="flex-1 bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 disabled:opacity-50"
+                            >
+                              {deletingPhone ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div>
@@ -548,6 +582,15 @@ const Dashboard = ({ clinic, onLogout }) => {
           </div>
         </div>
       </div>
+      
+      {/* Setup Wizard */}
+      {showSetupWizard && (
+        <SetupWizard
+          clinic={clinic}
+          onComplete={handleSetupComplete}
+          onLogout={onLogout}
+        />
+      )}
       
       {/* Modal */}
       <Modal
