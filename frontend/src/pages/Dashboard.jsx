@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 const Dashboard = ({ clinic, onLogout }) => {
   const [phoneInfo, setPhoneInfo] = useState(null);
@@ -20,8 +21,8 @@ const Dashboard = ({ clinic, onLogout }) => {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [phoneResponse, assistantResponse] = await Promise.all([
-        axios.get('http://localhost:3000/api/phone/info', { headers }),
-        axios.get('http://localhost:3000/api/assistant/info', { headers })
+        axios.get(`${API_BASE_URL}/api/phone/info`, { headers }),
+        axios.get(`${API_BASE_URL}/api/assistant/info`, { headers })
       ]);
 
       setPhoneInfo(phoneResponse.data.phone);
@@ -30,7 +31,7 @@ const Dashboard = ({ clinic, onLogout }) => {
       // Fetch system prompt if assistant exists
       if (assistantResponse.data.assistant) {
         try {
-          const promptResponse = await axios.get('http://localhost:3000/api/assistant/prompt', { headers });
+          const promptResponse = await axios.get(`${API_BASE_URL}/api/assistant/prompt`, { headers });
           const fullPrompt = promptResponse.data.prompt;
           // Get first line (up to first newline or first 100 characters)
           const firstLine = fullPrompt.split('\n')[0].substring(0, 100);
@@ -55,7 +56,7 @@ const Dashboard = ({ clinic, onLogout }) => {
   const handleCreateAssistant = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/assistant/create', {}, {
+      await axios.post(`${API_BASE_URL}/api/assistant/create`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
@@ -73,7 +74,7 @@ const Dashboard = ({ clinic, onLogout }) => {
     try {
       setLoading(true); // Prevent multiple clicks
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/phone/provision', {
+      await axios.post(`${API_BASE_URL}/api/phone/provision`, {
         areaCode: areaCode
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -99,7 +100,7 @@ const Dashboard = ({ clinic, onLogout }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete('http://localhost:3000/api/phone/delete', {
+      await axios.delete(`${API_BASE_URL}/api/phone/delete`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 const CallLogs = ({ clinic, onLogout }) => {
   const [calls, setCalls] = useState([]);
@@ -16,7 +17,7 @@ const CallLogs = ({ clinic, onLogout }) => {
   const fetchCalls = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/calls/logs', {
+      const response = await axios.get(`${API_BASE_URL}/api/calls/logs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCalls(response.data.calls);

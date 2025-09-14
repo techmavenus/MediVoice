@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 const Login = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,7 +26,7 @@ const Login = ({ onLogin }) => {
 
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const response = await axios.post(`http://localhost:3000${endpoint}`, formData);
+      const response = await axios.post(`${API_BASE_URL}${endpoint}`, formData);
 
       onLogin(response.data.token, response.data.clinic);
     } catch (error) {

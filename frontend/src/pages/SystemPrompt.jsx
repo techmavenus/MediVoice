@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 const SystemPrompt = ({ clinic, onLogout }) => {
   const [prompt, setPrompt] = useState('');
@@ -16,7 +17,7 @@ const SystemPrompt = ({ clinic, onLogout }) => {
   const fetchCurrentPrompt = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/assistant/prompt', {
+      const response = await axios.get(`${API_BASE_URL}/api/assistant/prompt`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPrompt(response.data.prompt);
@@ -40,7 +41,7 @@ const SystemPrompt = ({ clinic, onLogout }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:3000/api/assistant/prompt',
+      await axios.put(`${API_BASE_URL}/api/assistant/prompt`,
         { prompt },
         { headers: { Authorization: `Bearer ${token}` } }
       );

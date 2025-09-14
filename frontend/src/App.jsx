@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import SystemPrompt from './pages/SystemPrompt';
 import Knowledge from './pages/Knowledge';
 import CallLogs from './pages/CallLogs';
+import API_BASE_URL from './config/api';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -29,7 +30,7 @@ function App() {
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:3000/api/assistant/info', {
+      const response = await fetch(`${API_BASE_URL}/api/assistant/info`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

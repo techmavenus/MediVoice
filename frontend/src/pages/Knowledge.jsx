@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE_URL from '../config/api';
 
 const Knowledge = ({ clinic, onLogout }) => {
   const [files, setFiles] = useState([]);
@@ -16,7 +17,7 @@ const Knowledge = ({ clinic, onLogout }) => {
   const fetchFiles = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/knowledge/files', {
+      const response = await axios.get(`${API_BASE_URL}/api/knowledge/files`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFiles(response.data.files);
@@ -45,7 +46,7 @@ const Knowledge = ({ clinic, onLogout }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/knowledge/upload', formData, {
+      await axios.post(`${API_BASE_URL}/api/knowledge/upload`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -72,7 +73,7 @@ const Knowledge = ({ clinic, onLogout }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/api/knowledge/files/${fileId}`, {
+      await axios.delete(`${API_BASE_URL}/api/knowledge/files/${fileId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
