@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
+import Modal from '../components/Modal';
 
 const Knowledge = ({ clinic, onLogout }) => {
   const [files, setFiles] = useState([]);
@@ -9,6 +10,17 @@ const Knowledge = ({ clinic, onLogout }) => {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  
+  // Modal states
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: null,
+    confirmText: 'OK',
+    showCancel: false
+  });
 
   useEffect(() => {
     fetchFiles();
@@ -66,24 +78,30 @@ const Knowledge = ({ clinic, onLogout }) => {
     }
   };
 
-  const handleDelete = async (fileId) => {
-    if (!window.confirm('Are you sure you want to delete this file?')) {
-      return;
-    }
+  const handleDelete = (fileId) => {
+    setModal({
+      isOpen: true,
+      title: 'Confirm Delete',
+      message: 'Are you sure you want to delete this file?',
+      type: 'confirm',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`${API_BASE_URL}/api/knowledge/files/${fileId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
 
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/api/knowledge/files/${fileId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setMessage('File deleted successfully');
-      setMessageType('success');
-      fetchFiles();
-    } catch (error) {
-      setMessage(error.response?.data?.error || 'Failed to delete file');
-      setMessageType('error');
-    }
+          setMessage('File deleted successfully');
+          setMessageType('success');
+          fetchFiles();
+        } catch (error) {
+          setMessage(error.response?.data?.error || 'Failed to delete file');
+          setMessageType('error');
+        }
+      },
+      confirmText: 'Delete',
+      showCancel: true
+    });
   };
 
   return (
@@ -197,6 +215,18 @@ const Knowledge = ({ clinic, onLogout }) => {
           </div>
         </div>
       </div>
+      
+      {/* Modal */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+        confirmText={modal.confirmText}
+        showCancel={modal.showCancel}
+      />
     </div>
   );
 };

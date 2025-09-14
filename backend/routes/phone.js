@@ -4,7 +4,7 @@ const { db } = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
-// Provision phone number
+// Provision phone number with fallback area codes
 router.post('/provision', authenticateToken, async (req, res) => {
   try {
     const clinicId = req.clinic.id;
@@ -26,27 +26,64 @@ router.post('/provision', authenticateToken, async (req, res) => {
     const assistantDoc = assistantQuery.docs[0];
     const vapiAssistantId = assistantDoc.data().vapi_assistant_id;
 
-    // Request phone number from VAPI using vapi provider with area code
-    const vapiResponse = await axios.post('https://api.vapi.ai/phone-number', {
-      provider: "vapi",
-      numberDesiredAreaCode: areaCode
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.VAPI_API_KEY}`,
-        'Content-Type': 'application/json'
+    // Define fallback area codes in order of preference
+    const fallbackAreaCodes = [areaCode, '689', '447', '539'];
+    const uniqueAreaCodes = [...new Set(fallbackAreaCodes)]; // Remove duplicates
+
+    let vapiResponse = null;
+    let successfulAreaCode = null;
+    let lastError = null;
+
+    // Try each area code until one succeeds
+    for (const currentAreaCode of uniqueAreaCodes) {
+      try {
+        console.log(`Attempting to provision phone with area code: ${currentAreaCode}`);
+        
+        vapiResponse = await axios.post('https://api.vapi.ai/phone-number', {
+          provider: "vapi",
+          numberDesiredAreaCode: currentAreaCode
+        }, {
+          headers: {
+            'Authorization': `Bearer ${process.env.VAPI_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log(`VAPI phone creation response for area code ${currentAreaCode}:`, vapiResponse.data);
+
+        const vapiPhoneId = vapiResponse.data.id;
+
+        if (vapiPhoneId) {
+          successfulAreaCode = currentAreaCode;
+          console.log(`Successfully provisioned phone with area code: ${currentAreaCode}`);
+          break;
+        } else {
+          console.log(`No phone ID returned for area code ${currentAreaCode}`);
+          lastError = new Error(`No phone ID returned from VAPI for area code ${currentAreaCode}`);
+        }
+      } catch (error) {
+        console.error(`Failed to provision phone with area code ${currentAreaCode}:`, error.response?.data || error.message);
+        lastError = error;
+        
+        // If this is the last area code, we'll throw the error
+        if (currentAreaCode === uniqueAreaCodes[uniqueAreaCodes.length - 1]) {
+          throw error;
+        }
+        
+        // Continue to next area code
+        continue;
       }
-    });
+    }
 
-    console.log('VAPI phone creation response:', vapiResponse.data);
-
-    const vapiPhoneId = vapiResponse.data.id;
-
-    if (!vapiPhoneId) {
+    if (!vapiResponse || !successfulAreaCode) {
       return res.status(500).json({
-        error: 'No phone ID returned from VAPI',
-        debug: vapiResponse.data
+        error: 'Failed to provision phone number with any area code',
+        debug: lastError?.response?.data || lastError?.message,
+        attemptedAreaCodes: uniqueAreaCodes
       });
     }
+
+    const vapiPhoneId = vapiResponse.data.id;
 
     // Extract phone number from response or use VAPI ID as identifier
     const phoneNumber = vapiResponse.data.number ||
@@ -54,7 +91,7 @@ router.post('/provision', authenticateToken, async (req, res) => {
                        vapiResponse.data.phone ||
                        `VAPI-${vapiPhoneId.substring(0, 8)}`;
 
-    console.log('Using phone number:', phoneNumber);
+    console.log(`Using phone number: ${phoneNumber} (provisioned with area code: ${successfulAreaCode})`);
 
     // Link the phone number to the assistant
     try {
@@ -77,6 +114,7 @@ router.post('/provision', authenticateToken, async (req, res) => {
       clinic_id: clinicId,
       phone_number: phoneNumber,
       vapi_phone_id: vapiPhoneId,
+      area_code: successfulAreaCode,
       created_at: new Date()
     };
 
@@ -98,6 +136,11 @@ router.post('/provision', authenticateToken, async (req, res) => {
       phone: {
         id: phoneRef.id,
         ...phoneData
+      },
+      fallbackInfo: {
+        requestedAreaCode: areaCode,
+        successfulAreaCode: successfulAreaCode,
+        wasFallback: areaCode !== successfulAreaCode
       }
     });
   } catch (error) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
+import Modal from '../components/Modal';
 
 const Dashboard = ({ clinic, onLogout }) => {
   const [phoneInfo, setPhoneInfo] = useState(null);
@@ -12,6 +13,18 @@ const Dashboard = ({ clinic, onLogout }) => {
   const [callsLoading, setCallsLoading] = useState(true);
   const [showAreaCodeInput, setShowAreaCodeInput] = useState(false);
   const [areaCode, setAreaCode] = useState('689');
+  const [provisioningStatus, setProvisioningStatus] = useState('');
+  
+  // Modal states
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: null,
+    confirmText: 'OK',
+    showCancel: false
+  });
 
   useEffect(() => {
     fetchData();
@@ -105,53 +118,117 @@ const Dashboard = ({ clinic, onLogout }) => {
         onLogout();
         return;
       }
-      alert(error.response?.data?.error || 'Failed to create assistant');
+      setModal({
+        isOpen: true,
+        title: 'Error',
+        message: error.response?.data?.error || 'Failed to create assistant',
+        type: 'error',
+        onConfirm: null,
+        confirmText: 'OK',
+        showCancel: false
+      });
     }
   };
 
   const handleProvisionPhone = async () => {
     try {
       setLoading(true); // Prevent multiple clicks
+      setProvisioningStatus(`Trying area code ${areaCode}...`);
       const token = localStorage.getItem('token');
-      await axios.post(`${API_BASE_URL}/api/phone/provision`, {
+      
+      const response = await axios.post(`${API_BASE_URL}/api/phone/provision`, {
         areaCode: areaCode
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       await fetchData(); // Wait for data to refresh
       setShowAreaCodeInput(false);
+      setProvisioningStatus('');
+      
+      // Show success message with fallback info if applicable
+      const fallbackInfo = response.data.fallbackInfo;
+      if (fallbackInfo && fallbackInfo.wasFallback) {
+        setModal({
+          isOpen: true,
+          title: 'Phone Number Provisioned',
+          message: `Phone number successfully provisioned!\n\nNote: Your requested area code (${fallbackInfo.requestedAreaCode}) was not available, so we provisioned a number with area code ${fallbackInfo.successfulAreaCode} instead.`,
+          type: 'success',
+          onConfirm: null,
+          confirmText: 'OK',
+          showCancel: false
+        });
+      }
     } catch (error) {
       console.error('Failed to provision phone:', error);
+      setProvisioningStatus('');
       if (error.response?.status === 401 || error.response?.status === 403) {
         onLogout();
         return;
       }
-      alert(error.response?.data?.error || 'Failed to provision phone number');
+      
+      // Enhanced error message with attempted area codes
+      let errorMessage = error.response?.data?.error || 'Failed to provision phone number';
+      if (error.response?.data?.attemptedAreaCodes) {
+        errorMessage += `\n\nAttempted area codes: ${error.response.data.attemptedAreaCodes.join(', ')}`;
+      }
+      
+      setModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+        type: 'error',
+        onConfirm: null,
+        confirmText: 'OK',
+        showCancel: false
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeletePhone = async () => {
-    if (!window.confirm('Are you sure you want to delete this phone number? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/api/phone/delete`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchData();
-      alert('Phone number deleted successfully');
-    } catch (error) {
-      console.error('Failed to delete phone:', error);
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        onLogout();
-        return;
-      }
-      alert('Failed to delete phone number');
-    }
+  const handleDeletePhone = () => {
+    setModal({
+      isOpen: true,
+      title: 'Confirm Delete',
+      message: 'Are you sure you want to delete this phone number? This action cannot be undone.',
+      type: 'confirm',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`${API_BASE_URL}/api/phone/delete`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          fetchData();
+          setModal({
+            isOpen: true,
+            title: 'Success',
+            message: 'Phone number deleted successfully',
+            type: 'success',
+            onConfirm: null,
+            confirmText: 'OK',
+            showCancel: false
+          });
+        } catch (error) {
+          console.error('Failed to delete phone:', error);
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            onLogout();
+            return;
+          }
+          setModal({
+            isOpen: true,
+            title: 'Error',
+            message: 'Failed to delete phone number',
+            type: 'error',
+            onConfirm: null,
+            confirmText: 'OK',
+            showCancel: false
+          });
+        }
+      },
+      confirmText: 'Delete',
+      showCancel: true
+    });
   };
 
   if (loading) {
@@ -382,22 +459,10 @@ const Dashboard = ({ clinic, onLogout }) => {
                       
                       {phoneInfo ? (
                         <div>
-                          <p className="text-sm font-mono text-gray-700 mb-3">{phoneInfo.phone_number}</p>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setShowAreaCodeInput(true)}
-                        disabled={loading}
-                              className="flex-1 bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 disabled:opacity-50"
-                      >
-                              New
-                      </button>
-                      <button
-                        onClick={handleDeletePhone}
-                              className="flex-1 bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                          <p className="text-sm font-mono text-gray-700 mb-1">{phoneInfo.phone_number}</p>
+                          {phoneInfo.area_code && (
+                            <p className="text-xs text-gray-500">Area code: {phoneInfo.area_code}</p>
+                          )}
                         </div>
                       ) : (
                         <div>
@@ -438,6 +503,16 @@ const Dashboard = ({ clinic, onLogout }) => {
                     )}
                         </div>
                 )}
+                
+                {/* Provisioning Status */}
+                {provisioningStatus && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      <span className="text-sm text-blue-700">{provisioningStatus}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -473,6 +548,18 @@ const Dashboard = ({ clinic, onLogout }) => {
           </div>
         </div>
       </div>
+      
+      {/* Modal */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+        confirmText={modal.confirmText}
+        showCancel={modal.showCancel}
+      />
     </div>
   );
 };
