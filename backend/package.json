@@ -2,13 +2,13 @@
   "name": "vapi-wrapper-mvp",
   "version": "1.0.0",
   "description": "VAPI Wrapper MVP for clinic AI phone assistants",
-  "main": "backend/app.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node backend/app.js",
-    "dev": "nodemon backend/app.js",
-    "frontend": "cd frontend && npm start",
-    "build": "cd frontend && npm install && npm run build",
-    "heroku-postbuild": "npm run build"
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "frontend": "cd ../frontend && npm start",
+    "build": "cd ../frontend && npm install && npm run build",
+    "heroku-postbuild": "cd ../frontend && npm install && npm run build"
   },
   "dependencies": {
     "express": "^4.18.2",
