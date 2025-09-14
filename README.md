@@ -1,4 +1,4 @@
-# VAPI Wrapper MVP
+# MediVoice
 
 A minimal web application that wraps VAPI (Voice API) for clinics to manage AI phone assistants.
 
