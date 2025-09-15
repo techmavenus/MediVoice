@@ -4,11 +4,14 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import SystemPrompt from './pages/SystemPrompt';
 import Knowledge from './pages/Knowledge';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
 import API_BASE_URL from './config/api';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [clinic, setClinic] = useState(JSON.parse(localStorage.getItem('clinic') || 'null'));
+  const [role, setRole] = useState(localStorage.getItem('role') || 'user');
 
   // Debug logging
   console.log('Current token:', token);
@@ -44,18 +47,22 @@ function App() {
     }
   };
 
-  const handleLogin = (token, clinicData) => {
+  const handleLogin = (token, clinicData, userRole = 'user') => {
     setToken(token);
     setClinic(clinicData);
+    setRole(userRole);
     localStorage.setItem('token', token);
     localStorage.setItem('clinic', JSON.stringify(clinicData));
+    localStorage.setItem('role', userRole);
   };
 
   const handleLogout = () => {
     setToken(null);
     setClinic(null);
+    setRole('user');
     localStorage.removeItem('token');
     localStorage.removeItem('clinic');
+    localStorage.removeItem('role');
   };
 
   return (
@@ -65,13 +72,15 @@ function App() {
           <Route
             path="/"
             element={
-              token ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />
+              token ? (
+                role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/dashboard" />
+              ) : <Login onLogin={handleLogin} />
             }
           />
           <Route
             path="/dashboard"
             element={
-              token ? (
+              token && role !== 'admin' ? (
                 <Dashboard clinic={clinic} onLogout={handleLogout} />
               ) : (
                 <Navigate to="/" />
@@ -81,7 +90,7 @@ function App() {
           <Route
             path="/prompt"
             element={
-              token ? (
+              token && role !== 'admin' ? (
                 <SystemPrompt clinic={clinic} onLogout={handleLogout} />
               ) : (
                 <Navigate to="/" />
@@ -91,10 +100,20 @@ function App() {
           <Route
             path="/knowledge"
             element={
-              token ? (
+              token && role !== 'admin' ? (
                 <Knowledge clinic={clinic} onLogout={handleLogout} />
               ) : (
                 <Navigate to="/" />
+              )
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              token && role === 'admin' ? (
+                <AdminDashboard onLogout={handleLogout} />
+              ) : (
+                <AdminLogin onLogin={handleLogin} />
               )
             }
           />

@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "create-admin": "node scripts/createAdmin.js",
+    "check-admin": "node scripts/checkAdmin.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

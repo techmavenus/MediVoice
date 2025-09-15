@@ -8,6 +8,8 @@ const assistantRoutes = require('./routes/assistant');
 const knowledgeRoutes = require('./routes/knowledge');
 const phoneRoutes = require('./routes/phone');
 const callRoutes = require('./routes/calls');
+const adminRoutes = require('./routes/admin');
+const systemPromptRoutes = require('./routes/systemPrompt');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +25,8 @@ app.use('/api/assistant', assistantRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/phone', phoneRoutes);
 app.use('/api/calls', callRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/system-prompt', systemPromptRoutes);
 
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '../frontend/build')));

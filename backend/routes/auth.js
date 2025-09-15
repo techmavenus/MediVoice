@@ -92,9 +92,21 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Check if user is admin
+    const isAdmin = clinic.email === process.env.ADMIN_EMAIL || clinic.role === 'admin';
+    const role = isAdmin ? 'admin' : 'user';
+    
+    console.log('Login attempt:', {
+      email: clinic.email,
+      adminEmail: process.env.ADMIN_EMAIL,
+      clinicRole: clinic.role,
+      isAdmin,
+      finalRole: role
+    });
+
     // Generate JWT token
     const token = jwt.sign(
-      { id: clinic.id, email: clinic.email },
+      { id: clinic.id, email: clinic.email, role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -102,6 +114,7 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
+      role,
       clinic: {
         id: clinic.id,
         email: clinic.email,

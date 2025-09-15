@@ -48,10 +48,25 @@ router.post('/create', authenticateToken, async (req, res) => {
     const clinicData = clinicDoc.data();
     const clinicName = clinicData?.clinic_name || 'Clinic';
 
+    // Get default system prompt from database
+    let systemPrompt = ASSISTANT_CONFIG.model.systemPrompt;
+    try {
+      const promptDoc = await db.collection('system_settings').doc('default_prompt').get();
+      if (promptDoc.exists) {
+        systemPrompt = promptDoc.data().prompt;
+      }
+    } catch (error) {
+      console.log('Using fallback system prompt:', error.message);
+    }
+
     // Create personalized assistant config
     const personalizedConfig = {
       ...ASSISTANT_CONFIG,
-      name: `${clinicName} Assistant`
+      name: `${clinicName} Assistant`,
+      model: {
+        ...ASSISTANT_CONFIG.model,
+        systemPrompt: systemPrompt
+      }
     };
 
     // Create assistant via VAPI API
